@@ -54,7 +54,7 @@ JVM_MAX_HEAP_SIZE=${JVM_MAX_HEAP_SIZE:-1024M}
 
 
 MONGOLOCK="${DATAPATH}/db/mongod.lock"
-JVM_EXTRA_OPTS="${JVM_EXTRA_OPTS} -Dunifi.datadir=${DATADIR} -Dunifi.logdir=${LOGDIR} -Dunifi.rundir=${RUNDIR}"
+JVM_EXTRA_OPTS="${JVM_EXTRA_OPTS} --add-opens=java.base/java.time=ALL-UNNAMED -Dunifi.datadir=${DATADIR} -Dunifi.logdir=${LOGDIR} -Dunifi.rundir=${RUNDIR}"
 PIDFILE=/var/run/unifi/unifi.pid
 
 if [ ! -z "${JVM_MAX_HEAP_SIZE}" ]; then
@@ -161,6 +161,11 @@ fi
 
 UNIFI_CMD="java ${JVM_OPTS} -jar ${BASEDIR}/lib/ace.jar start"
 
+if [ "$EUID" -ne 0 ] && command -v permset &> /dev/null
+then
+  permset
+fi
+
 # controller writes to relative path logs/server.log
 cd ${BASEDIR}
 
@@ -187,7 +192,7 @@ if [[ "${@}" == "unifi" ]]; then
         ${UNIFI_CMD} &
     elif [ "${RUNAS_UID0}" == "false" ]; then
         if [ "${BIND_PRIV}" == "true" ]; then
-            if setcap 'cap_net_bind_service=+ep' "${JAVA_HOME}/jre/bin/java"; then
+            if setcap 'cap_net_bind_service=+ep' "${JAVA_HOME}/bin/java"; then
                 sleep 1
             else
                 log "ERROR: setcap failed, can not continue"
